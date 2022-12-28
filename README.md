@@ -58,9 +58,9 @@ time(sec) , count(in) , count(out) , total_count(in) , total_count(out)
 
 ```mermaid
 classDiagram
-`ailia APPS People Counter` <|-- `Detic` : Empty area detection (area matching)
+`ailia APPS Empty Detection` <|-- `Detic` : Empty area detection (area matching)
 `Detic` <|-- `ailia.core` : Inference result
-`ailia APPS People Counter` : Input Video, Output Video, Output csv
+`ailia APPS Empty Detection` : Input Video, Output Video, Output csv
 `Detic` : Large object segmentation
 `ailia.core` <|-- `onnx` : Model
 `ailia.core` : ailiaCreate, ailiaPredict, ailiaDestroy
