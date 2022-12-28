@@ -2,6 +2,8 @@
 
 Detects cars in parking lots, inventory on shelves, etc., and counts vacant information.
 
+![Detic](./tutorial/detic.png)
+
 ## Functions
 
 - Empty area detection
