@@ -2,8 +2,6 @@
 
 Detects cars in parking lots, inventory on shelves, etc., and counts vacant information.
 
-![Detic](./tutorial/detic.png)
-
 ## Functions
 
 - Empty area detection
@@ -23,18 +21,18 @@ Detects cars in parking lots, inventory on shelves, etc., and counts vacant info
 python3 ailia-apps-empty-detection.py
 ```
 
-![Open GUI](./tutorial/open.png)
+![Open GUI](./tutorial/open.jpg)
 
 2. Push "Input video" button to select input video
 3. Push "Set area" button to set area
 
-![Set area](./tutorial/area.png)
+![Set area](./tutorial/area.jpg)
 
 Click on the screen to draw two lines.
 
 4. Push "Run" button to execute the app
 
-![Run app](./tutorial/run.png)
+![Run app](./tutorial/run.jpg)
 
 Count (out) is incremented when passing through the line of in to go out. Count (in) is incremented when passing through the line of out to go in.
 
@@ -48,10 +46,10 @@ b. Push "Output csv" button to select output csv
 The examples of csv file.
 
 ```
-time(sec) , count(in) , count(out) , total_count(in) , total_count(out)
-0 , 0 , 0 , 0 , 0
-1 , 1 , 1 , 1 , 1
-2 , 1 , 1 , 2 , 2
+time(sec) , area0 , area1
+0 , 0 , 0
+1 , 0 , 1
+2 , 1 , 0
 ```
 
 ## Architecture

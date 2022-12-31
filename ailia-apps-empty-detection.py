@@ -178,36 +178,43 @@ def model_changed(event):
     #print("model",model_index)
 
 # ======================
-# Line crossing
+# Area setting
 # ======================
 
-target_lines = []
-human_count = 0
+area_list = [[]]
+area_idx = 0
 
 def display_line(frame):
-    if len(target_lines) >= 4:
-        cv2.line(frame, target_lines[2], target_lines[3], (255,0,0), thickness=5)
-        cv2.putText(frame, "OUT", (target_lines[2][0] + 5,target_lines[2][1] + 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255,0,0), thickness=3)
-    if len(target_lines) >= 2:
-        cv2.line(frame, target_lines[0], target_lines[1], (0,0,255), thickness=5)
-        cv2.putText(frame, "IN", (target_lines[0][0] + 5,target_lines[0][1] + 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255), thickness=3)
-    for i in range(0, len(target_lines)):
-        if i <= 1:
+    global area_list, area_idx
+    area_name = get_area_list()
+    for a in range(len(area_list)):
+        target_lines = area_list[a]
+        if a == area_idx:
             color = (0,0,255)
         else:
             color = (255,0,0)
-        cv2.circle(frame, center = target_lines[i], radius = 10, color=color, thickness=3)
+        if len(target_lines) >= 2:
+            for i in range(len(target_lines) - 1):
+                cv2.line(frame, target_lines[i], target_lines[i+1], color, thickness=1)
+            if len(target_lines) >= 4:
+                cv2.line(frame, target_lines[3], target_lines[0], color, thickness=1)
+            cv2.putText(frame, area_name[a], (target_lines[0][0] + 5,target_lines[0][1] + 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, thickness=1)
+        for i in range(0, len(target_lines)):
+            cv2.circle(frame, center = target_lines[i], radius = 3, color=color, thickness=3)
 
 g_frame = None
-crossingLineWindow = None
+areaWindows = None
+areaListWindow = None
 
-def close_crossing_line():
-    global crossingLineWindow
-    if crossingLineWindow != None and crossingLineWindow.winfo_exists():
-        crossingLineWindow.destroy()
-        crossingLineWindow = None
+def close_area_window():
+    global areaWindows, areaListWindow
+    if areaWindows != None and areaWindows.winfo_exists():
+        areaWindows.destroy()
+        areaWindows = None
+    if areaListWindow != None and areaListWindow.winfo_exists():
+        areaListWindow.destroy()
+        areaListWindow = None
 
 def get_video_path():
     global input_list, input_index
@@ -216,49 +223,121 @@ def get_video_path():
     else:
         return input_list[input_index]
 
-def set_crossing_line():
+def add_area():
+    global area_list, area_idx, listsArea, ListboxArea
+    area_list.append([])
+    ListboxArea.select_clear(area_idx)
+    area_idx = len(area_list) - 1
+    listsArea.set(get_area_list())
+    ListboxArea.select_set(area_idx)
+    update_area()
+
+def remove_area():
+    global area_list, area_idx, listsArea, ListboxArea
+    if len(area_list) == 1:
+        return
+    ListboxArea.select_clear(area_idx)
+    area_list.remove(area_list[area_idx])
+    area_idx = 0
+    listsArea.set(get_area_list())
+    ListboxArea.select_set(area_idx)
+    update_area()
+
+ListboxArea = None
+listsArea = None
+
+def area_select_changed(event):
+    global area_idx, ListboxArea
+    selection = event.widget.curselection()
+    if selection:
+        area_idx = selection[0]
+    else:
+        area_idx = 0
+    ListboxArea.select_set(area_idx)
+    update_area()
+
+def get_area_list():
+    global area_list
+    id_list = []
+    for i in range(len(area_list)):
+        id_list.append("area"+str(i))
+    return id_list
+
+def set_area():
     global g_frame, g_frame_shown
     global textCrossingLine
-    global crossingLineWindow
+    global areaWindows, areaListWindow
 
-    if crossingLineWindow != None and crossingLineWindow.winfo_exists():
-        return
+    if (areaWindows != None and areaWindows.winfo_exists()) or (areaListWindow != None and areaListWindow.winfo_exists()):
+        close_area_window()
 
     capture = get_capture(get_video_path())
     assert capture.isOpened(), 'Cannot capture source'
     ret, frame = capture.read()
     g_frame = frame
 
-    crossingLineWindow = tk.Toplevel()
-    crossingLineWindow.title("Set area")
-    crossingLineWindow.geometry(str(g_frame.shape[1])+"x"+str(g_frame.shape[0]))
-    tk.Label(crossingLineWindow, text ="Please set crossing line by click").pack()
-    crossingLineWindow.canvas = tk.Canvas(crossingLineWindow)
-    crossingLineWindow.canvas.bind('<Button-1>', set_line)
-    crossingLineWindow.canvas.pack(expand = True, fill = tk.BOTH)
+    areaWindows = tk.Toplevel()
+    areaWindows.title("Set area")
+    areaWindows.geometry(str(g_frame.shape[1])+"x"+str(g_frame.shape[0]))
+    tk.Label(areaWindows, text ="Please set area by click").pack()
+    areaWindows.canvas = tk.Canvas(areaWindows)
+    areaWindows.canvas.bind('<Button-1>', set_line)
+    areaWindows.canvas.pack(expand = True, fill = tk.BOTH)
 
+    areaListWindow = tk.Toplevel()
+    areaListWindow.title("Select target area")
+    areaListWindow.geometry("400x400")
+    textAreaListHeader = tk.StringVar(areaListWindow)
+    textAreaListHeader.set("Area list")
+    labelAreaListHeader = tk.Label(areaListWindow, textvariable=textAreaListHeader)
+    labelAreaListHeader.grid(row=0, column=0, sticky=tk.NW)
+    area_list = get_area_list()
+    global listsArea
+    listsArea = tk.StringVar(value=area_list)
+    global ListboxArea
+    ListboxArea = tk.Listbox(areaListWindow, listvariable=listsArea, width=20, height=16, selectmode="single", exportselection=False)
+    ListboxArea.bind("<<ListboxSelect>>", area_select_changed)
+    ListboxArea.select_set(area_idx)
+    ListboxArea.grid(row=1, column=0, sticky=tk.NW, rowspan=1, columnspan=20)
+
+    textAreaAdd = tk.StringVar(areaListWindow)
+    textAreaAdd.set("Add area")
+    buttonAreaAdd = tk.Button(areaListWindow, textvariable=textAreaAdd, command=add_area, width=14)
+    buttonAreaAdd.grid(row=22, column=0, sticky=tk.NW)
+
+    textAreaRemove = tk.StringVar(areaListWindow)
+    textAreaRemove.set("Remove area")
+    buttonAreaRemove = tk.Button(areaListWindow, textvariable=textAreaRemove, command=remove_area, width=14)
+    buttonAreaRemove.grid(row=23, column=0, sticky=tk.NW)
+
+    update_area()
+
+def update_area():
+    global g_frame
     frame = g_frame.copy()
     display_line(frame)
     update_frame_image(frame)
 
 def update_frame_image(frame):
-    global crossingLineWindow
+    global areaWindows
     cv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     pil_image = Image.fromarray(cv_image)
-    crossingLineWindow.photo_image = ImageTk.PhotoImage(image=pil_image)
-    crossingLineWindow.canvas.create_image(
+    areaWindows.photo_image = ImageTk.PhotoImage(image=pil_image)
+    areaWindows.canvas.create_image(
             frame.shape[1] / 2,
             frame.shape[0] / 2,                   
-            image=crossingLineWindow.photo_image
+            image=areaWindows.photo_image
             )
 
 def set_line(event):
-    global target_lines
+    global area_list, area_idx
+    target_lines = area_list[area_idx]
     x = event.x
     y = event.y
     if len(target_lines)>=4:
-        target_lines = []
-    target_lines.append((x,y))
+        target_lines.clear()
+    else:
+        target_lines.append((x,y))
     frame = g_frame.copy()
     display_line(frame)
     update_frame_image(frame)
@@ -304,7 +383,7 @@ def ui():
     global textCrossingLine
     textCrossingLine = tk.StringVar(frame)
     textCrossingLine.set("Set area")
-    buttonCrossingLine = tk.Button(frame, textvariable=textCrossingLine, command=set_crossing_line, width=14)
+    buttonCrossingLine = tk.Button(frame, textvariable=textCrossingLine, command=set_area, width=14)
     buttonCrossingLine.grid(row=1, column=0, sticky=tk.NW)
 
     textOutputVideo = tk.StringVar(frame)
@@ -392,7 +471,7 @@ import subprocess
 proc = None
 
 def run():
-    close_crossing_line()
+    close_area_window()
 
     global proc
 
