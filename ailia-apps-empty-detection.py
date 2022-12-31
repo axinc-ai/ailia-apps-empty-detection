@@ -343,6 +343,29 @@ def set_line(event):
     update_frame_image(frame)
 
 # ======================
+# Menu functions
+# ======================
+
+def menu_file_open_click():
+    return
+
+def menu_file_saveas_click():
+    return
+
+def menu(root):
+    menubar = tk.Menu(root)
+
+    menu_file = tk.Menu(menubar, tearoff = False)
+    menu_file.add_command(label = "Load area settings",  command = menu_file_open_click,  accelerator="Ctrl+O")
+    menu_file.add_command(label = "Save area settings", command = menu_file_saveas_click, accelerator="Ctrl+S")
+    #menu_file.add_separator() # 仕切り線
+    #menu_file.add_command(label = "Quit",            command = root.destroy)
+
+    menubar.add_cascade(label="File", menu=menu_file)
+
+    root.config(menu=menubar)
+
+# ======================
 # GUI functions
 # ======================
 
@@ -358,6 +381,9 @@ def ui():
     root = tk.Tk()
     root.title("ailia APPS Empty Detection")
     root.geometry("720x360")
+
+    # メニュー作成
+    menu(root)
 
     # 環境情報取得
     global input_list
