@@ -45,10 +45,8 @@ b. Push "Output csv" button to select output csv
 The examples of csv file.
 
 ```
-time(sec) , area0 , area1
-0 , 0 , 0
-1 , 0 , 1
-2 , 1 , 0
+time(sec) , area0 , area1 , area2
+0 , 1 , 1 , 0
 ```
 
 ## Architecture

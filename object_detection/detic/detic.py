@@ -79,6 +79,10 @@ parser.add_argument(
     '--area', type=str, default="",
     help='Set area list of (id x1 y1 x2 y2 x3 y3 x4 y4).'
 )
+parser.add_argument(
+    '--csvpath', type=str, default=None,
+    help='Set output csv.'
+)
 args = update_parser(parser)
 
 if not args.opset16:
@@ -159,6 +163,33 @@ def check_area_overwrap(pred_masks, area_mask):
             ratio = hit_area_average / mask_area_average
             if ratio > area_mask[a]["ratio"] :
                 area_mask[a]["ratio"] = ratio
+
+# ======================
+# Csv output
+# ======================
+
+def open_csv(area_mask):
+    csv = open(args.csvpath, mode = 'w')
+    csv.write("time(sec)")
+    for a in range(len(area_mask)):
+        csv.write(" , " + area_mask[a]["id"])
+    csv.write("\n")
+    return csv
+
+def write_csv(csv, fps_time, area_mask):
+    csv.write(str(fps_time))
+    for a in range(len(area_mask)):
+        if area_mask[a]["ratio"] >= threshold:
+            label = "1"
+        else:
+            label = "0"
+        csv.write(" , " + label)
+    csv.write("\n")
+    csv.flush()
+
+def close_csv(csv):
+    if csv is not None:
+        csv.close()
 
 # ======================
 # Secondaty Functions
@@ -455,9 +486,14 @@ def recognize_from_video(net):
         writer = get_writer(args.savepath, f_h, f_w)
     else:
         writer = None
+    fps = capture.get(cv2.CAP_PROP_FPS)
 
     frame_shown = False
     area_mask = None
+    csv = None
+    before_fps_time = -1
+    frame_no = 0
+
     while True:
         ret, frame = capture.read()
         if (cv2.waitKey(1) & 0xFF == ord('q')) or not ret:
@@ -474,6 +510,10 @@ def recognize_from_video(net):
         # prepare mask
         if area_mask == None:
             area_mask = prepare_area_mask(frame)
+            if args.csvpath != None:
+                csv = open_csv(area_mask)
+            else:
+                csv = None
 
         # check area
         check_area_overwrap(pred["pred_masks"].astype(np.uint8), area_mask)
@@ -489,11 +529,20 @@ def recognize_from_video(net):
         if writer is not None:
             res_img = cv2.resize(res_img, (f_w, f_h))
             writer.write(res_img.astype(np.uint8))
+        fps_time = int(frame_no / fps)
+        if csv is not None:
+            if before_fps_time != fps_time:
+                write_csv(csv, fps_time, area_mask)
+                before_fps_time = fps_time
+        
+        frame_no = frame_no + 1
 
     capture.release()
     cv2.destroyAllWindows()
     if writer is not None:
         writer.release()
+    if csv is not None:
+        close_csv(csv)
 
     logger.info('Script finished successfully.')
 

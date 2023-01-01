@@ -501,8 +501,8 @@ def run():
         
     if args.savepath:
         args_dict["savepath"] = args.savepath
-    #if args.csvpath:
-    #    args_dict["csvpath"] = args.csvpath
+    if args.csvpath:
+        args_dict["csvpath"] = args.csvpath
     
     global model_index
     args_dict["model_type"] = get_model_list()[model_index]
