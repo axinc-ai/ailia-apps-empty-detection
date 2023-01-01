@@ -48,7 +48,7 @@ REMOTE_PATH = 'https://storage.googleapis.com/ailia-models/detic/'
 IMAGE_PATH = 'desk.jpg'
 SAVE_IMAGE_PATH = 'output.png'
 
-IMAGE_SIZE = 400    # Reduce for performance (default is 800px)
+IMAGE_SIZE = 800    # Reduce for performance (default is 800px)
 IMAGE_MAX_SIZE = IMAGE_SIZE
 
 # ======================
