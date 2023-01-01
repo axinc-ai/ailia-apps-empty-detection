@@ -3,6 +3,7 @@ import time
 
 import numpy as np
 import cv2
+import json
 from matplotlib import cm
 from PIL import Image, ImageTk
 
@@ -99,7 +100,6 @@ def output_video_dialog():
         args.savepath = file_name
         textOutputVideoDetail.set(os.path.basename(args.savepath))
 
-
 def output_csv_dialog():
     global textOutputCsvDetail
     fTyp = [("Output Csv File", "*")]
@@ -140,9 +140,6 @@ def get_model_list():
     model_list = ["SwinB_896_4x", "R50_640_4x"]
     return model_list  
 
-#lvis in21k
-#resolution
-
 def model_changed(event):
     global model_index
     selection = event.widget.curselection()
@@ -156,14 +153,15 @@ def model_changed(event):
 # Area setting
 # ======================
 
-area_list = [[]]
+area_list = [{"id":"0","area":[(0,0),(0,100),(100,100),(100,0)]}]
 area_idx = 0
 
 def display_line(frame):
     global area_list, area_idx
     area_name = get_area_list()
     for a in range(len(area_list)):
-        target_lines = area_list[a]
+        area_id = area_list[a]["id"]
+        target_lines = area_list[a]["area"]
         if a == area_idx:
             color = (0,0,255)
         else:
@@ -173,7 +171,7 @@ def display_line(frame):
                 cv2.line(frame, target_lines[i], target_lines[i+1], color, thickness=1)
             if len(target_lines) >= 4:
                 cv2.line(frame, target_lines[3], target_lines[0], color, thickness=1)
-            cv2.putText(frame, area_name[a], (target_lines[0][0] + 5,target_lines[0][1] + 30),
+            cv2.putText(frame, area_id, (target_lines[0][0] + 5,target_lines[0][1] + 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, thickness=1)
         for i in range(0, len(target_lines)):
             cv2.circle(frame, center = target_lines[i], radius = 3, color=color, thickness=3)
@@ -200,7 +198,7 @@ def get_video_path():
 
 def add_area():
     global area_list, area_idx, listsArea, ListboxArea
-    area_list.append([])
+    area_list.append({"id":str(len(area_list)), "area":[]})
     ListboxArea.select_clear(area_idx)
     area_idx = len(area_list) - 1
     listsArea.set(get_area_list())
@@ -235,7 +233,7 @@ def get_area_list():
     global area_list
     id_list = []
     for i in range(len(area_list)):
-        id_list.append("area"+str(i))
+        id_list.append(area_list[i]["id"])
     return id_list
 
 def set_area():
@@ -306,7 +304,7 @@ def update_frame_image(frame):
 
 def set_line(event):
     global area_list, area_idx
-    target_lines = area_list[area_idx]
+    target_lines = area_list[area_idx]["area"]
     x = event.x
     y = event.y
     if len(target_lines)>=4:
@@ -322,10 +320,22 @@ def set_line(event):
 # ======================
 
 def menu_file_open_click():
-    return
+    global area_list
+    fTyp = [("Config files","*.json")]
+    iDir = os.path.abspath(os.path.dirname(__file__))
+    file_name = tk.filedialog.askopenfilename(filetypes=fTyp, initialdir=iDir)
+    if len(file_name) != 0:
+        with open(file_name, 'r') as json_file:
+            area_list = json.load(json_file)
 
 def menu_file_saveas_click():
-    return
+    global area_list
+    fTyp = [("Config files", "*.json")]
+    iDir = os.path.abspath(os.path.dirname(__file__))
+    file_name = tk.filedialog.asksaveasfilename(filetypes=fTyp, initialdir=iDir)
+    if len(file_name) != 0:
+        with open(file_name, 'w') as json_file:
+            json.dump(area_list, json_file)
 
 def menu(root):
     menubar = tk.Menu(root)
