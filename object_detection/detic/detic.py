@@ -140,8 +140,8 @@ def display_area(frame, area_mask):
         label = "Empty"
         if area_mask[a]["ratio"] >= threshold:
             label = "Fill"
-        label = label + "(" + str(int(area_mask[a]["ratio"]*100)/100.0) + ")"
-        cv2.putText(frame, area_id + " : "+label, (0, a * 20 + 40),
+        #label = label + "(" + str(int(area_mask[a]["ratio"]*100)/100.0) + ")"
+        cv2.putText(frame, area_id + " : "+label, (0, a * 40 + 40),
                     cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255), thickness=3)
 
 threshold = 0.25
