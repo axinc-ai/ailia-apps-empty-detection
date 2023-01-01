@@ -11,7 +11,8 @@ Detects cars in parking lots, inventory on shelves, etc., and counts vacant info
 
 - Windows, macOS, Linux
 - Python 3.7 and later
-- [ailia SDK](https://github.com/axinc-ai/ailia-models/blob/master/TUTORIAL.md) 1.2.14 and later
+- [ailia SDK](https://github.com/axinc-ai/ailia-models/blob/master/TUTORIAL.md) 1.2.10 and later
+- torch for grid sampler (`pip3 install torch`), torch is not required if you use ailia SDK 1.2.14 and later
 
 ## Basic Usage
 

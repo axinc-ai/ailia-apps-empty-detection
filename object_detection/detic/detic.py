@@ -15,7 +15,6 @@ from utils import get_base_parser, update_parser, get_savepath  # noqa
 from model_utils import check_and_download_models  # noqa
 from detector_utils import load_image  # noqa
 from webcamera_utils import get_capture, get_writer  # noqa
-#from functional import grid_sample  # noqa
 # logger
 from logging import getLogger  # noqa
 
@@ -83,6 +82,8 @@ parser.add_argument(
 )
 args = update_parser(parser)
 
+if not args.opset16:
+    from functional import grid_sample  # noqa
 
 # ======================
 # Secondaty Functions

@@ -506,7 +506,12 @@ def run():
     global env_index
     args_dict["env_id"] = env_index
 
-    args_dict["opset16"] = True
+    version = ailia.get_version().split(".")
+    major_version = int(version[0])
+    minor_version = int(version[1])
+    revision_version = int(version[2])
+    if major_version > 1 or minor_version > 2 or revision_version >= 14:
+        args_dict["opset16"] = True
 
     #if len(target_lines) >= 4:
     #    line1 = str(target_lines[0][0]) + " " + str(target_lines[0][1]) + " " + str(target_lines[1][0]) + " " + str(target_lines[1][1])
