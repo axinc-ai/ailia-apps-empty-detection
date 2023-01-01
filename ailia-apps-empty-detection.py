@@ -153,12 +153,11 @@ def model_changed(event):
 # Area setting
 # ======================
 
-area_list = [{"id":"0","area":[(0,0),(0,100),(100,100),(100,0)]}]
+area_list = [{"id":"area0","area":[(0,0),(0,100),(100,100),(100,0)]}]
 area_idx = 0
 
-def display_line(frame):
+def display_area(frame):
     global area_list, area_idx
-    area_name = get_area_list()
     for a in range(len(area_list)):
         area_id = area_list[a]["id"]
         target_lines = area_list[a]["area"]
@@ -198,7 +197,7 @@ def get_video_path():
 
 def add_area():
     global area_list, area_idx, listsArea, ListboxArea
-    area_list.append({"id":str(len(area_list)), "area":[]})
+    area_list.append({"id":"area"+str(len(area_list)), "area":[]})
     ListboxArea.select_clear(area_idx)
     area_idx = len(area_list) - 1
     listsArea.set(get_area_list())
@@ -288,7 +287,7 @@ def set_area():
 def update_area():
     global g_frame
     frame = g_frame.copy()
-    display_line(frame)
+    display_area(frame)
     update_frame_image(frame)
 
 def update_frame_image(frame):
@@ -312,7 +311,7 @@ def set_line(event):
     else:
         target_lines.append((x,y))
     frame = g_frame.copy()
-    display_line(frame)
+    display_area(frame)
     update_frame_image(frame)
 
 # ======================
@@ -513,10 +512,18 @@ def run():
     if major_version > 1 or minor_version > 2 or revision_version >= 14:
         args_dict["opset16"] = True
 
-    #if len(target_lines) >= 4:
-    #    line1 = str(target_lines[0][0]) + " " + str(target_lines[0][1]) + " " + str(target_lines[1][0]) + " " + str(target_lines[1][1])
-    #    line2 = str(target_lines[2][0]) + " " + str(target_lines[2][1]) + " " + str(target_lines[3][0]) + " " + str(target_lines[3][1])
-    #    args_dict["crossing_line"] = line1 + " " + line2
+    area_info = ""
+    for i in range(len(area_list)):
+        if (len(area_list[i]["area"]) >= 4):
+            target_lines = area_list[i]["area"]
+            area_id = area_list[i]["id"]
+            line1 = str(target_lines[0][0]) + " " + str(target_lines[0][1]) + " " + str(target_lines[1][0]) + " " + str(target_lines[1][1])
+            line2 = str(target_lines[2][0]) + " " + str(target_lines[2][1]) + " " + str(target_lines[3][0]) + " " + str(target_lines[3][1])
+            if area_info != "":
+                area_info = area_info + " "
+            area_info = area_info + area_id + " " + line1 + " " + line2
+    if area_info != "":
+        args_dict["area"] = area_info
 
     options = []
     for key in args_dict:

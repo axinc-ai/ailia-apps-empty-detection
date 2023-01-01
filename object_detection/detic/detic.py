@@ -48,8 +48,8 @@ REMOTE_PATH = 'https://storage.googleapis.com/ailia-models/detic/'
 IMAGE_PATH = 'desk.jpg'
 SAVE_IMAGE_PATH = 'output.png'
 
-IMAGE_SIZE = 800
-IMAGE_MAX_SIZE = 800  # tempolary limit to 800px (original : 1333)
+IMAGE_SIZE = 400    # Reduce for performance (default is 800px)
+IMAGE_MAX_SIZE = IMAGE_SIZE
 
 # ======================
 # Arguemnt Parser Config
@@ -76,14 +76,89 @@ parser.add_argument(
     help='Use the opset16 model. In that case, grid_sampler runs inside the model.'
 )
 parser.add_argument(
-    '--onnx',
-    action='store_true',
-    help='execute onnxruntime version.'
+    '--area', type=str, default="",
+    help='Set area list of (id x1 y1 x2 y2 x3 y3 x4 y4).'
 )
 args = update_parser(parser)
 
 if not args.opset16:
     from functional import grid_sample  # noqa
+
+area_list = args.area.split(" ")
+
+# ======================
+# Area detection
+# ======================
+
+def prepare_area_mask(frame):
+    global area_list
+    area_mask = []
+    a = 0
+    while a < len(area_list):
+        area_id = area_list[a]
+        mask, target_lines = _create_area_mask(frame, a)
+        a = a + 9
+        area_mask.append({"id":area_id, "mask":mask,"target_lines":target_lines,"ratio":0.0})
+    return area_mask
+
+def _create_area_mask(frame, a):
+    global area_list
+    mask = np.zeros(frame.shape)
+
+    target_lines = [
+        [int(area_list[a+1]),int(area_list[a+2])],
+        [int(area_list[a+3]),int(area_list[a+4])],
+        [int(area_list[a+5]),int(area_list[a+6])],
+        [int(area_list[a+7]),int(area_list[a+8])]]
+
+    contours = np.array([target_lines[0], target_lines[1], target_lines[2], target_lines[3], target_lines[0]])
+    cv2.fillConvexPoly(mask, points =contours, color=(255, 255, 255))
+
+    return mask, target_lines
+
+def display_area(frame, area_mask):
+    for a in range(len(area_mask)):
+        area_id = area_mask[a]["id"]
+        mask = area_mask[a]["mask"]
+        target_lines = area_mask[a]["target_lines"]
+
+        color = (0,0,255)
+
+        #if len(target_lines) >= 2:
+
+        for i in range(len(target_lines) - 1):
+            cv2.line(frame, target_lines[i], target_lines[i+1], color, thickness=1)
+        if len(target_lines) >= 4:
+            cv2.line(frame, target_lines[3], target_lines[0], color, thickness=1)
+
+        #frame[mask>0] = 255
+        cv2.putText(frame, area_id, (target_lines[0][0] + 5,target_lines[0][1] + 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, thickness=1)
+        #for i in range(0, len(target_lines)):
+        #    cv2.circle(frame, center = target_lines[i], radius = 3, color=color, thickness=3)
+
+        label = "Empty"
+        if area_mask[a]["ratio"] >= threshold:
+            label = "Fill"
+        label = label + "(" + str(int(area_mask[a]["ratio"]*100)/100.0) + ")"
+        cv2.putText(frame, area_id + " : "+label, (0, a * 20 + 40),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255), thickness=3)
+
+threshold = 0.25
+
+def check_area_overwrap(pred_masks, area_mask):
+    for a in range(len(area_mask)):
+        area_mask[a]["ratio"] = 0.0
+        m = area_mask[a]["mask"][:,:,0]
+        mask_area = m[m > 0] # 0-255
+        mask_area_average = np.sum(mask_area)
+        for i in range(pred_masks.shape[0]):
+            p = pred_masks[i]
+            hit_area = p[m > 0] * 255 # 0-1 -> 0-255
+            hit_area_average = np.sum(hit_area)
+            ratio = hit_area_average / mask_area_average
+            if ratio > area_mask[a]["ratio"] :
+                area_mask[a]["ratio"] = ratio
 
 # ======================
 # Secondaty Functions
@@ -346,15 +421,9 @@ def predict(net, img):
 
     # feedforward
     if args.opset16:
-        if not args.onnx:
-            output = net.predict([img, im_hw])
-        else:
-            output = net.run(None, {'img': img, 'im_hw': im_hw})
+        output = net.predict([img, im_hw])
     else:
-        if not args.onnx:
-            output = net.predict([img])
-        else:
-            output = net.run(None, {'img': img})
+        output = net.predict([img])
 
     pred_boxes, scores, pred_classes, pred_masks = output
 
@@ -374,48 +443,6 @@ def predict(net, img):
     return pred
 
 
-def recognize_from_image(net):
-    # input image loop
-    for image_path in args.input:
-        logger.info(image_path)
-
-        # prepare input data
-        img = load_image(image_path)
-        img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
-
-        # inference
-        logger.info('Start inference...')
-        if args.benchmark:
-            logger.info('BENCHMARK mode')
-            total_time_estimation = 0
-            for i in range(args.benchmark_count):
-                start = int(round(time.time() * 1000))
-                pred = predict(net, img)
-                end = int(round(time.time() * 1000))
-                estimation_time = (end - start)
-
-                # Loggin
-                logger.info(f'\tailia processing estimation time {estimation_time} ms')
-                if i != 0:
-                    total_time_estimation = total_time_estimation + estimation_time
-
-            logger.info(f'\taverage time estimation {total_time_estimation / (args.benchmark_count - 1)} ms')
-        else:
-            pred = predict(net, img)
-
-        logger.info('detected %d instances' % len(pred['pred_boxes']))
-
-        # draw prediction
-        res_img = draw_predictions(img, pred)
-
-        # plot result
-        savepath = get_savepath(args.savepath, image_path, ext='.png')
-        logger.info(f'saved at : {savepath}')
-        cv2.imwrite(savepath, res_img)
-
-    logger.info('Script finished successfully.')
-
-
 def recognize_from_video(net):
     video_file = args.video if args.video else args.input[0]
     capture = get_capture(video_file)
@@ -430,18 +457,29 @@ def recognize_from_video(net):
         writer = None
 
     frame_shown = False
+    area_mask = None
     while True:
         ret, frame = capture.read()
         if (cv2.waitKey(1) & 0xFF == ord('q')) or not ret:
             break
         if frame_shown and cv2.getWindowProperty('frame', cv2.WND_PROP_VISIBLE) == 0:
             break
-
+    
         # inference
         pred = predict(net, frame)
 
         # draw prediction
         res_img = draw_predictions(frame, pred)
+
+        # prepare mask
+        if area_mask == None:
+            area_mask = prepare_area_mask(frame)
+
+        # check area
+        check_area_overwrap(pred["pred_masks"].astype(np.uint8), area_mask)
+
+        # draw area
+        display_area(res_img, area_mask)
 
         # show
         cv2.imshow('frame', res_img)
@@ -487,22 +525,18 @@ def main():
         args.env_id = 0
 
     # initialize
-    if not args.onnx:
-        if args.env_id == 0:
-            # CPU supporting reuse_interstage
-            memory_mode = ailia.get_memory_mode(
-                reduce_constant=True, ignore_input_with_initializer=True,
-                reduce_interstage=False, reuse_interstage=True)
-        else:
-            # cuDNN only worked with reduce_interstage
-            logger.info("GPU only worked with reduce_interstage")
-            memory_mode = ailia.get_memory_mode(
-                reduce_constant=True, ignore_input_with_initializer=True,
-                reduce_interstage=True, reuse_interstage=False)
-        net = ailia.Net(MODEL_PATH, WEIGHT_PATH, env_id=args.env_id, memory_mode=memory_mode)
+    if args.env_id == 0:
+        # CPU supporting reuse_interstage
+        memory_mode = ailia.get_memory_mode(
+            reduce_constant=True, ignore_input_with_initializer=True,
+            reduce_interstage=False, reuse_interstage=True)
     else:
-        import onnxruntime
-        net = onnxruntime.InferenceSession(WEIGHT_PATH)
+        # cuDNN only worked with reduce_interstage
+        logger.info("GPU only worked with reduce_interstage")
+        memory_mode = ailia.get_memory_mode(
+            reduce_constant=True, ignore_input_with_initializer=True,
+            reduce_interstage=True, reuse_interstage=False)
+    net = ailia.Net(MODEL_PATH, WEIGHT_PATH, env_id=args.env_id, memory_mode=memory_mode)
 
     if args.video is not None:
         recognize_from_video(net)
