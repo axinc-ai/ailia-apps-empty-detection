@@ -34,8 +34,6 @@ Click on the screen to draw two lines.
 
 ![Run app](./tutorial/run.jpg)
 
-Count (out) is incremented when passing through the line of in to go out. Count (in) is incremented when passing through the line of out to go in.
-
 ## Other functions
 
 ### Write output to video and csv
