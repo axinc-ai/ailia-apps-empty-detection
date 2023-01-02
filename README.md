@@ -60,6 +60,16 @@ By entering the class name in Accept Label, only a specific class label can be r
 For example, in the case of a parking lot, area determination can be performed only for the car by setting the Accept Label to car.
 Multiple labels can be specified by separating them with commas.
 
+## Models
+
+### SwinB or R50
+
+SwinB is a highly accurate model using VisionTransformer. R50 is a traditional model using Convolution.
+
+### lvis or in21k
+
+Lvis can detects 1000 objects. In2k can detects 21000 objects.
+
 ## Architecture
 
 ```mermaid
