@@ -48,9 +48,6 @@ REMOTE_PATH = 'https://storage.googleapis.com/ailia-models/detic/'
 IMAGE_PATH = 'desk.jpg'
 SAVE_IMAGE_PATH = 'output.png'
 
-IMAGE_SIZE = 800    # Reduce for performance (default is 800px)
-IMAGE_MAX_SIZE = IMAGE_SIZE
-
 # ======================
 # Arguemnt Parser Config
 # ======================
@@ -83,12 +80,27 @@ parser.add_argument(
     '--csvpath', type=str, default=None,
     help='Set output csv.'
 )
+parser.add_argument(
+    '-dw', '--detection_width',
+    default=800, type=int,   # tempolary limit to 800px (original : 1333)
+    help='The detection width for detic. (default: 800)'
+)
+parser.add_argument(
+    '-t', '--text', dest='text_inputs', type=str,
+    action='append',
+    help='Accept label text. (can be specified multiple times)'
+)
 args = update_parser(parser)
 
 if not args.opset16:
     from functional import grid_sample  # noqa
 
 area_list = args.area.split(" ")
+
+if args.text_inputs:
+    accept_label = args.text_inputs
+else:
+    accept_label = ["all"]
 
 # ======================
 # Area detection
@@ -135,7 +147,9 @@ def display_area(frame, area_mask):
         if len(target_lines) >= 4:
             cv2.line(frame, target_lines[3], target_lines[0], color, thickness=1)
 
-        #frame[mask>0] = 255
+        if area_mask[a]["ratio"] >= threshold:
+            frame[mask>0] = 255
+        
         cv2.putText(frame, area_id, (target_lines[0][0] + 5,target_lines[0][1] + 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, thickness=1)
         #for i in range(0, len(target_lines)):
@@ -150,13 +164,31 @@ def display_area(frame, area_mask):
 
 threshold = 0.25
 
-def check_area_overwrap(pred_masks, area_mask):
+def check_area_overwrap(pred_masks, classes, area_mask):
+    # get detected label name
+    vocabulary = args.vocabulary
+    class_names = (
+        get_lvis_meta_v1() if vocabulary == 'lvis' else get_in21k_meta_v1()
+    )["thing_classes"]
+    labels = [class_names[int(i)] for i in classes]  # ailia always returns float tensor so need to add cast
+
+    # target area loop
     for a in range(len(area_mask)):
+        # check area of overwrap
         area_mask[a]["ratio"] = 0.0
         m = area_mask[a]["mask"][:,:,0]
         mask_area = m[m > 0] # 0-255
         mask_area_average = np.sum(mask_area)
         for i in range(pred_masks.shape[0]):
+            # is acceptable label
+            accept = False
+            for l in accept_label:
+                if l == "all" or (l in labels[i]):
+                    accept = True
+            if not accept:
+                continue
+
+            # check area of overwrap
             p = pred_masks[i]
             hit_area = p[m > 0] * 255 # 0-1 -> 0-255
             hit_area_average = np.sum(hit_area)
@@ -330,7 +362,11 @@ def draw_predictions(img, predictions):
             points = np.array(points).reshape((1, -1, 2)).astype(np.int32)
             cv2.fillPoly(img_b, pts=[points], color=color)
 
-        img = cv2.addWeighted(img, 0.5, img_b, 0.5, 0)
+        alpha = 0.1
+        for l in accept_label:
+            if l == "all" or (l in labels[i]):
+                alpha = 0.5
+        img = cv2.addWeighted(img, 1.0 - alpha, img_b, alpha, 0)
 
     for i in range(num_instances):
         color = assigned_colors[i]
@@ -383,8 +419,8 @@ def preprocess(img):
 
     img = img[:, :, ::-1]  # BGR -> RGB
 
-    size = IMAGE_SIZE
-    max_size = IMAGE_MAX_SIZE
+    size = args.detection_width
+    max_size = args.detection_width
     scale = size / min(im_h, im_w)
     if im_h < im_w:
         oh, ow = size, scale * im_w
@@ -516,7 +552,7 @@ def recognize_from_video(net):
                 csv = None
 
         # check area
-        check_area_overwrap(pred["pred_masks"].astype(np.uint8), area_mask)
+        check_area_overwrap(pred["pred_masks"].astype(np.uint8), pred["pred_classes"].tolist(), area_mask)
 
         # draw area
         display_area(res_img, area_mask)

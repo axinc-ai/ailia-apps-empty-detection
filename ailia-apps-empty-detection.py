@@ -137,7 +137,7 @@ def environment_changed(event):
 model_index = 0
 
 def get_model_list():
-    model_list = ["SwinB_896_4x", "R50_640_4x"]
+    model_list = ["SwinB_896_4x-lvis", "SwinB_896_4x-in21k", "R50_640_4x-lvis", "R50_640_4x-in21k"]
     return model_list  
 
 def model_changed(event):
@@ -359,10 +359,8 @@ def menu(root):
 # ======================
 
 root = None
-checkBoxClipBln = None
-checkBoxAgeGenderBln = None
-clipTextEntery = None
-checkBoxAlwaysBln = None
+resolutionTextEntry= None
+labelTextEntry= None
 
 def ui():
     # rootメインウィンドウの設定
@@ -449,7 +447,7 @@ def ui():
     lists = tk.StringVar(value=model_list)
     listEnvironment =tk.StringVar(value=env_list)
 
-    ListboxModel = tk.Listbox(frame, listvariable=lists, width=26, height=3, selectmode="single", exportselection=False)
+    ListboxModel = tk.Listbox(frame, listvariable=lists, width=26, height=4, selectmode="single", exportselection=False)
     ListboxEnvironment = tk.Listbox(frame, listvariable=listEnvironment, width=26, height=4, selectmode="single", exportselection=False)
 
     ListboxModel.bind("<<ListboxSelect>>", model_changed)
@@ -469,6 +467,31 @@ def ui():
     labelEnvironment = tk.Label(frame, textvariable=textEnvironment)
     labelEnvironment.grid(row=8, column=2, sticky=tk.NW, rowspan=1)
     ListboxEnvironment.grid(row=9, column=2, sticky=tk.NW, rowspan=4)
+
+    textOptions = tk.StringVar(frame)
+    textOptions.set("Options")
+    labelOptions = tk.Label(frame, textvariable=textOptions)
+    labelOptions.grid(row=0, column=3, sticky=tk.NW)
+
+    textResolution = tk.StringVar(frame)
+    textResolution.set("Resolution")
+    labelResolution = tk.Label(frame, textvariable=textResolution)
+    labelResolution.grid(row=1, column=3, sticky=tk.NW)
+
+    global resolutionTextEntry
+    resolutionTextEntry = tkinter.Entry(frame, width=20)
+    resolutionTextEntry.insert(tkinter.END,"800")
+    resolutionTextEntry.grid(row=2, column=3, sticky=tk.NW, rowspan=1)
+
+    textLabels = tk.StringVar(frame)
+    textLabels.set("Accept Label")
+    labelLabels = tk.Label(frame, textvariable=textLabels)
+    labelLabels.grid(row=3, column=3, sticky=tk.NW)
+
+    global labelTextEntry
+    labelTextEntry = tkinter.Entry(frame, width=20)
+    labelTextEntry.insert(tkinter.END,"all")
+    labelTextEntry.grid(row=4, column=3, sticky=tk.NW, rowspan=1)
 
     root.mainloop()
 
@@ -505,10 +528,15 @@ def run():
         args_dict["csvpath"] = args.csvpath
     
     global model_index
-    args_dict["model_type"] = get_model_list()[model_index]
+    args_dict["model_type"] = get_model_list()[model_index].split("-")[0]
+    args_dict["vocabulary"] = get_model_list()[model_index].split("-")[1]
 
     global env_index
     args_dict["env_id"] = env_index
+
+    global resolutionTextEntry
+    if resolutionTextEntry:
+        args_dict["detection_width"] = int(resolutionTextEntry.get())
 
     version = ailia.get_version().split(".")
     major_version = int(version[0])
@@ -544,11 +572,11 @@ def run():
                 options.append(str(args_dict[key]))
 
     global clipTextEntery
-    if clipTextEntery:
-        clip_text = clipTextEntery.get().split(",")
-        for text in clip_text:
+    if labelTextEntry:
+        label_text = labelTextEntry.get().split(",")
+        for text in label_text:
                 options.append("--text")
-                options.append(text)#"\""+text+"\"")
+                options.append(text)
 
     cmd = [cmd, "detic.py"] + options
     print(" ".join(cmd))

@@ -49,6 +49,17 @@ time(sec) , area0 , area1 , area2
 0 , 1 , 1 , 0
 ```
 
+### Set detection resolution
+
+You can improve performance by lowering the image recognition resolution.
+
+### Set acceptable label
+
+By default, all class labels are recognized.
+By entering the class name in Accept Label, only a specific class label can be recognized.
+For example, in the case of a parking lot, area determination can be performed only for the car by setting the Accept Label to car.
+Multiple labels can be specified by separating them with commas.
+
 ## Architecture
 
 ```mermaid
