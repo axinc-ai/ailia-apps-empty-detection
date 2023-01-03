@@ -91,12 +91,12 @@ parser.add_argument(
     help='The area threshold. (default: 800)'
 )
 parser.add_argument(
-    '--accept_text', dest='accept_text_inputs', type=str,
+    '--accept_label', dest='accept_text_inputs', type=str,
     action='append',
     help='Accept label text. (can be specified multiple times)'
 )
 parser.add_argument(
-    '--deny_text', dest='deny_text_inputs', type=str,
+    '--deny_label', dest='deny_text_inputs', type=str,
     action='append',
     help='Deny label text. (can be specified multiple times)'
 )
@@ -107,6 +107,10 @@ if not args.opset16:
 
 area_list = args.area.split(" ")
 
+# ======================
+# Accept and Deny labels
+# ======================
+
 if args.accept_text_inputs:
     accept_label = args.accept_text_inputs
 else:
@@ -116,6 +120,17 @@ if args.deny_text_inputs:
     deny_label = args.deny_text_inputs
 else:
     deny_label = ["none"]
+
+def is_accept_label(label):
+    global accept_label, deny_label
+    accept = False
+    for l in accept_label:
+        if l == "all" or (l in label):
+            accept = True
+    for l in deny_label:
+        if l != "none" and (l in label):
+            accept = False
+    return accept
 
 # ======================
 # Area detection
@@ -200,11 +215,7 @@ def check_area_overwrap(pred_masks, classes, area_mask):
         mask_area_average = np.sum(mask_area)
         for i in range(pred_masks.shape[0]):
             # is acceptable label
-            accept = False
-            for l in accept_label:
-                if l == "all" or (l in labels[i]):
-                    accept = True
-            if not accept:
+            if not is_accept_label(labels[i]):
                 continue
 
             # check area of overwrap
@@ -364,6 +375,9 @@ def draw_predictions(img, predictions):
     default_font_size = int(max(np.sqrt(height * width) // 90, 10))
 
     for i in range(num_instances):
+        if not is_accept_label(labels[i]):
+            continue
+
         color = assigned_colors[i]
         color = (int(color[0]), int(color[1]), int(color[2]))
         img_b = img.copy()
@@ -381,13 +395,13 @@ def draw_predictions(img, predictions):
             points = np.array(points).reshape((1, -1, 2)).astype(np.int32)
             cv2.fillPoly(img_b, pts=[points], color=color)
 
-        alpha = 0.1
-        for l in accept_label:
-            if l == "all" or (l in labels[i]):
-                alpha = 0.5
+        alpha = 0.5
         img = cv2.addWeighted(img, 1.0 - alpha, img_b, alpha, 0)
 
     for i in range(num_instances):
+        if not is_accept_label(labels[i]):
+            continue
+
         color = assigned_colors[i]
         color_text = color_brightness(color, brightness_factor=0.7)
 

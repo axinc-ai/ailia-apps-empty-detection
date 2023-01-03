@@ -646,14 +646,14 @@ def run():
     if labelAcceptTextEntry:
         label_text = labelAcceptTextEntry.get().split(",")
         for text in label_text:
-                options.append("--accept_text")
+                options.append("--accept_label")
                 options.append(text)
 
     global labelDenyTextEntry
     if labelDenyTextEntry:
         label_text = labelDenyTextEntry.get().split(",")
         for text in label_text:
-                options.append("--deny_text")
+                options.append("--deny_label")
                 options.append(text)
 
     cmd = [cmd, "detic.py"] + options
