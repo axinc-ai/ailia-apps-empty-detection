@@ -274,7 +274,7 @@ def check_area_overwrap(pred_masks, classes, area_mask):
     # set result
     for a in range(len(area_mask)):
         if area_mask[a]["new_ratio"] < area_mask[a]["deny_ratio"]:
-            area_mask[a]["ratio"] = area_mask[a]["ratio"] # use before state
+            area_mask[a]["ratio"] = area_mask[a]["ratio"] # use before state, for example, person crossing front of camera
         else:
             area_mask[a]["ratio"] = area_mask[a]["new_ratio"]
 
