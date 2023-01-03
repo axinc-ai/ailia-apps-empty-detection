@@ -368,30 +368,88 @@ def set_line(event):
 # Menu functions
 # ======================
 
-def menu_file_open_click():
+def get_settings():
     global area_list
+    settings = {}
+    settings["area_list"] = area_list
+
+    global model_index
+    settings["model_type"] = get_model_list()[model_index]
+
+    global resolutionTextEntry
+    settings["detection_width"] = resolutionTextEntry.get()
+
+    global areaThresholdTextEntry
+    settings["area_threshold"] = areaThresholdTextEntry.get()
+
+    global labelAcceptTextEntry
+    settings["accept_label"] = labelAcceptTextEntry.get()
+
+    global labelDenyTextEntry
+    settings["deny_label"] = labelDenyTextEntry.get()
+
+    global checkBoxMultipleAssignBln
+    if checkBoxMultipleAssignBln.get():
+        settings["multiple_assign"] = True
+    else:
+        settings["multiple_assign"] = False
+    
+    return settings
+
+def set_settings(settings):
+    global area_list
+    area_list = settings["area_list"]
+
+    global model_index, ListboxModel
+    model_list = get_model_list()
+    for i in range(len(model_list)):
+        if settings["model_type"] == model_list[i]:
+            model_index = i
+    ListboxModel.select_set(model_index)
+
+    global resolutionTextEntry
+    resolutionTextEntry.delete(0, tk.END)
+    resolutionTextEntry.insert(0, str(settings["detection_width"]))
+
+    global areaThresholdTextEntry
+    areaThresholdTextEntry.delete(0, tk.END)
+    areaThresholdTextEntry.insert(0, str(settings["area_threshold"]))
+
+    global labelAcceptTextEntry
+    labelAcceptTextEntry.delete(0, tk.END)
+    labelAcceptTextEntry.insert(0, str(settings["accept_label"]))
+
+    global labelDenyTextEntry
+    labelDenyTextEntry.delete(0, tk.END)
+    labelDenyTextEntry.insert(0, str(settings["deny_label"]))
+
+    global checkBoxMultipleAssignBln
+    checkBoxMultipleAssignBln.set(settings["multiple_assign"])
+
+def menu_file_open_click():
     fTyp = [("Config files","*.json")]
     iDir = os.path.abspath(os.path.dirname(__file__))
     file_name = tk.filedialog.askopenfilename(filetypes=fTyp, initialdir=iDir)
     if len(file_name) != 0:
         with open(file_name, 'r') as json_file:
-            area_list = json.load(json_file)
+            settings = json.load(json_file)
+            set_settings(settings)
 
 def menu_file_saveas_click():
-    global area_list
     fTyp = [("Config files", "*.json")]
     iDir = os.path.abspath(os.path.dirname(__file__))
     file_name = tk.filedialog.asksaveasfilename(filetypes=fTyp, initialdir=iDir)
     if len(file_name) != 0:
         with open(file_name, 'w') as json_file:
-            json.dump(area_list, json_file)
+            settings = get_settings()
+            json.dump(settings, json_file)
 
 def menu(root):
     menubar = tk.Menu(root)
 
     menu_file = tk.Menu(menubar, tearoff = False)
-    menu_file.add_command(label = "Load area settings",  command = menu_file_open_click,  accelerator="Ctrl+O")
-    menu_file.add_command(label = "Save area settings", command = menu_file_saveas_click, accelerator="Ctrl+S")
+    menu_file.add_command(label = "Load settings",  command = menu_file_open_click,  accelerator="Ctrl+O")
+    menu_file.add_command(label = "Save settings", command = menu_file_saveas_click, accelerator="Ctrl+S")
     #menu_file.add_separator() # 仕切り線
     #menu_file.add_command(label = "Quit",            command = root.destroy)
 
@@ -409,6 +467,7 @@ areaThresholdTextEntry = None
 labelAcceptTextEntry = None
 labelDenyTextEntry = None
 checkBoxMultipleAssignBln = None
+ListboxModel = None
 
 def ui():
     # rootメインウィンドウの設定
@@ -495,6 +554,7 @@ def ui():
     lists = tk.StringVar(value=model_list)
     listEnvironment =tk.StringVar(value=env_list)
 
+    global ListboxModel
     ListboxModel = tk.Listbox(frame, listvariable=lists, width=26, height=4, selectmode="single", exportselection=False)
     ListboxEnvironment = tk.Listbox(frame, listvariable=listEnvironment, width=26, height=4, selectmode="single", exportselection=False)
 
