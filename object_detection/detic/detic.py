@@ -211,7 +211,13 @@ def check_area_overwrap(pred_masks, classes, area_mask):
     )["thing_classes"]
     labels = [class_names[int(i)] for i in classes]  # ailia always returns float tensor so need to add cast
 
+    # reset all ratio
+    for a in range(len(area_mask)):
+        area_mask[a]["new_ratio"] = 0.0
+        area_mask[a]["deny_ratio"] = 0.0
+
     if args.multiple_assign:
+        # one object to multiple area
         for a in range(len(area_mask)):
             # check area of overwrap
             area_mask[a]["ratio"] = 0.0
@@ -220,28 +226,23 @@ def check_area_overwrap(pred_masks, classes, area_mask):
             mask_area_average = np.sum(mask_area)
 
             for i in range(pred_masks.shape[0]):
-                # is acceptable label
-                if not is_accept_label(labels[i]):
-                    continue
-
                 # check area of overwrap
                 p = pred_masks[i]
                 hit_area = p[m > 0] * 255 # 0-1 -> 0-255
                 hit_area_average = np.sum(hit_area)
                 ratio = hit_area_average / mask_area_average
-                if ratio > area_mask[a]["ratio"] :
-                    area_mask[a]["ratio"] = ratio
+                if is_accept_label(labels[i]):
+                    if ratio > area_mask[a]["new_ratio"]:
+                        area_mask[a]["new_ratio"] = ratio
+                else:
+                    if ratio > area_mask[a]["deny_ratio"]:
+                        area_mask[a]["deny_ratio"] = ratio
     else:
-        # reset all ratio
-        for a in range(len(area_mask)):
-            area_mask[a]["new_ratio"] = 0.0
-            area_mask[a]["deny_ratio"] = 0.0
-
-        # prediction loop
+        # one object to one area
+        # because if car top is in area_a and car bottom is in area_b,
+        # we should assign to only one area
         for i in range(pred_masks.shape[0]):
             # calc maximum overwrap area
-            # because if car top is in area_a and car bottom is in area_b,
-            # we should assign to only one area
             max_ratio = 0.0
             max_a = -1
             for a in range(len(area_mask)):
@@ -270,12 +271,12 @@ def check_area_overwrap(pred_masks, classes, area_mask):
                     if area_mask[max_a]["deny_ratio"] < max_ratio:
                         area_mask[max_a]["deny_ratio"] = max_ratio
         
-        # set result
-        for a in range(len(area_mask)):
-            if area_mask[a]["new_ratio"] < area_mask[a]["deny_ratio"]:
-                area_mask[a]["ratio"] = area_mask[a]["ratio"]
-            else:
-                area_mask[a]["ratio"] = area_mask[a]["new_ratio"]
+    # set result
+    for a in range(len(area_mask)):
+        if area_mask[a]["new_ratio"] < area_mask[a]["deny_ratio"]:
+            area_mask[a]["ratio"] = area_mask[a]["ratio"] # use before state
+        else:
+            area_mask[a]["ratio"] = area_mask[a]["new_ratio"]
 
 # ======================
 # Csv output
@@ -426,11 +427,15 @@ def draw_predictions(img, predictions):
     default_font_size = int(max(np.sqrt(height * width) // 90, 10))
 
     for i in range(num_instances):
-        if not is_accept_label(labels[i]):
-            continue
-
         color = assigned_colors[i]
         color = (int(color[0]), int(color[1]), int(color[2]))
+
+        if is_accept_label(labels[i]):
+            alpha = 0.5
+        else:
+            alpha = 0.25
+            color = (0, 0, 0)
+
         img_b = img.copy()
 
         # draw box
@@ -446,13 +451,9 @@ def draw_predictions(img, predictions):
             points = np.array(points).reshape((1, -1, 2)).astype(np.int32)
             cv2.fillPoly(img_b, pts=[points], color=color)
 
-        alpha = 0.5
         img = cv2.addWeighted(img, 1.0 - alpha, img_b, alpha, 0)
 
     for i in range(num_instances):
-        if not is_accept_label(labels[i]):
-            continue
-
         color = assigned_colors[i]
         color_text = color_brightness(color, brightness_factor=0.7)
 
