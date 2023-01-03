@@ -357,10 +357,10 @@ def draw_predictions(img, predictions):
 
         # draw box
         x0, y0, x1, y1 = boxes[i]
-        cv2.rectangle(
-            img_b, (x0, y0), (x1, y1),
-            color=color,
-            thickness=default_font_size // 4)
+        #cv2.rectangle(
+        #    img_b, (x0, y0), (x1, y1),
+        #    color=color,
+        #    thickness=default_font_size // 4)
 
         # draw segment
         polygons, _ = mask_to_polygons(masks[i])
