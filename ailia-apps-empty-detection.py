@@ -408,6 +408,7 @@ resolutionTextEntry = None
 areaThresholdTextEntry = None
 labelAcceptTextEntry = None
 labelDenyTextEntry = None
+checkBoxMultipleAssignBln = None
 
 def ui():
     # rootメインウィンドウの設定
@@ -560,6 +561,12 @@ def ui():
     labelDenyTextEntry.insert(tkinter.END,"none")
     labelDenyTextEntry.grid(row=8, column=3, sticky=tk.NW, rowspan=1)
 
+    global checkBoxMultipleAssignBln
+    checkBoxMultipleAssignBln = tkinter.BooleanVar()
+    checkBoxMultipleAssignBln.set(False)
+    checkBoxMultipleAssign = tkinter.Checkbutton(frame, variable=checkBoxMultipleAssignBln, text='Multiple Assign')
+    checkBoxMultipleAssign.grid(row=9, column=3, sticky=tk.NW, rowspan=1)
+
     root.mainloop()
 
 # ======================
@@ -608,6 +615,10 @@ def run():
     global areaThresholdTextEntry
     if areaThresholdTextEntry:
         args_dict["area_threshold"] = float(areaThresholdTextEntry.get())
+
+    global checkBoxMultipleAssignBln
+    if checkBoxMultipleAssignBln.get():
+        args_dict["multiple_assign"] = True
 
     version = ailia.get_version().split(".")
     major_version = int(version[0])

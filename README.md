@@ -73,6 +73,10 @@ By entering the class name in Deny Label, ignoring certain labels.
 For example, by specifying person, it is possible to remove the effect when a person crosses the camera.
 By default (none), all objects are detected and not ignored.
 
+### Set multiple assign
+
+By default, 1 object is assigned to 1 area that overlaps the most. Enable Multiple Assign to assign one object to multiple areas.
+
 ## Models
 
 ### SwinB or R50

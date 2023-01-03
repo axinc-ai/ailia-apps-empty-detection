@@ -100,6 +100,11 @@ parser.add_argument(
     action='append',
     help='Deny label text. (can be specified multiple times)'
 )
+parser.add_argument(
+    '--multiple_assign',
+    action='store_true',
+    help='Assign one object to multiple area.'
+)
 args = update_parser(parser)
 
 if not args.opset16:
@@ -206,25 +211,71 @@ def check_area_overwrap(pred_masks, classes, area_mask):
     )["thing_classes"]
     labels = [class_names[int(i)] for i in classes]  # ailia always returns float tensor so need to add cast
 
-    # target area loop
-    for a in range(len(area_mask)):
-        # check area of overwrap
-        area_mask[a]["ratio"] = 0.0
-        m = area_mask[a]["mask"][:,:,0]
-        mask_area = m[m > 0] # 0-255
-        mask_area_average = np.sum(mask_area)
-        for i in range(pred_masks.shape[0]):
-            # is acceptable label
-            if not is_accept_label(labels[i]):
-                continue
-
+    if args.multiple_assign:
+        for a in range(len(area_mask)):
             # check area of overwrap
-            p = pred_masks[i]
-            hit_area = p[m > 0] * 255 # 0-1 -> 0-255
-            hit_area_average = np.sum(hit_area)
-            ratio = hit_area_average / mask_area_average
-            if ratio > area_mask[a]["ratio"] :
-                area_mask[a]["ratio"] = ratio
+            area_mask[a]["ratio"] = 0.0
+            m = area_mask[a]["mask"][:,:,0]
+            mask_area = m[m > 0] # 0-255
+            mask_area_average = np.sum(mask_area)
+
+            for i in range(pred_masks.shape[0]):
+                # is acceptable label
+                if not is_accept_label(labels[i]):
+                    continue
+
+                # check area of overwrap
+                p = pred_masks[i]
+                hit_area = p[m > 0] * 255 # 0-1 -> 0-255
+                hit_area_average = np.sum(hit_area)
+                ratio = hit_area_average / mask_area_average
+                if ratio > area_mask[a]["ratio"] :
+                    area_mask[a]["ratio"] = ratio
+    else:
+        # reset all ratio
+        for a in range(len(area_mask)):
+            area_mask[a]["new_ratio"] = 0.0
+            area_mask[a]["deny_ratio"] = 0.0
+
+        # prediction loop
+        for i in range(pred_masks.shape[0]):
+            # calc maximum overwrap area
+            # because if car top is in area_a and car bottom is in area_b,
+            # we should assign to only one area
+            max_ratio = 0.0
+            max_a = -1
+            for a in range(len(area_mask)):
+                # check area of overwrap
+                m = area_mask[a]["mask"][:,:,0]
+                mask_area = m[m > 0] # 0-255
+                mask_area_average = np.sum(mask_area)
+                
+                # check area of overwrap
+                p = pred_masks[i]
+                hit_area = p[m > 0] * 255 # 0-1 -> 0-255
+                hit_area_average = np.sum(hit_area)
+                ratio = hit_area_average / mask_area_average
+
+                # fetch max ratio
+                if max_ratio < ratio:
+                    max_ratio = ratio
+                    max_a = a
+            
+            # assign prediction to maximum area
+            if max_a != -1:
+                if is_accept_label(labels[i]):
+                    if area_mask[max_a]["new_ratio"] < max_ratio:
+                        area_mask[max_a]["new_ratio"] = max_ratio
+                else:
+                    if area_mask[max_a]["deny_ratio"] < max_ratio:
+                        area_mask[max_a]["deny_ratio"] = max_ratio
+        
+        # set result
+        for a in range(len(area_mask)):
+            if area_mask[a]["new_ratio"] < area_mask[a]["deny_ratio"]:
+                area_mask[a]["ratio"] = area_mask[a]["ratio"]
+            else:
+                area_mask[a]["ratio"] = area_mask[a]["new_ratio"]
 
 # ======================
 # Csv output
