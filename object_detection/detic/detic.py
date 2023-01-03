@@ -86,9 +86,19 @@ parser.add_argument(
     help='The detection width for detic. (default: 800)'
 )
 parser.add_argument(
-    '-t', '--text', dest='text_inputs', type=str,
+    '-at', '--area_threshold',
+    default=0.125, type=float,
+    help='The area threshold. (default: 800)'
+)
+parser.add_argument(
+    '--accept_text', dest='accept_text_inputs', type=str,
     action='append',
     help='Accept label text. (can be specified multiple times)'
+)
+parser.add_argument(
+    '--deny_text', dest='deny_text_inputs', type=str,
+    action='append',
+    help='Deny label text. (can be specified multiple times)'
 )
 args = update_parser(parser)
 
@@ -97,10 +107,15 @@ if not args.opset16:
 
 area_list = args.area.split(" ")
 
-if args.text_inputs:
-    accept_label = args.text_inputs
+if args.accept_text_inputs:
+    accept_label = args.accept_text_inputs
 else:
     accept_label = ["all"]
+
+if args.deny_text_inputs:
+    deny_label = args.deny_text_inputs
+else:
+    deny_label = ["none"]
 
 # ======================
 # Area detection
@@ -147,7 +162,7 @@ def display_area(frame, area_mask):
         if len(target_lines) >= 4:
             cv2.line(frame, target_lines[3], target_lines[0], color, thickness=1)
 
-        if area_mask[a]["ratio"] >= threshold:
+        if area_mask[a]["ratio"] >= args.area_threshold:
             frame[mask>0] = 255
         
 def display_text(frame, area_mask):
@@ -158,7 +173,7 @@ def display_text(frame, area_mask):
         color = (0,0,255)
 
         label = "Empty"
-        if area_mask[a]["ratio"] >= threshold:
+        if area_mask[a]["ratio"] >= args.area_threshold:
             label = "Fill"
 
         cv2.putText(frame, area_id, (target_lines[0][0] + 5,target_lines[0][1] + 30),
@@ -167,8 +182,6 @@ def display_text(frame, area_mask):
         #label = label + "(" + str(int(area_mask[a]["ratio"]*100)/100.0) + ")"
         cv2.putText(frame, area_id + " : "+label, (0, a * 40 + 40),
                     cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255), thickness=3)
-
-threshold = 0.125#25
 
 def check_area_overwrap(pred_masks, classes, area_mask):
     # get detected label name
@@ -217,7 +230,7 @@ def open_csv(area_mask):
 def write_csv(csv, fps_time, area_mask):
     csv.write(str(fps_time))
     for a in range(len(area_mask)):
-        if area_mask[a]["ratio"] >= threshold:
+        if area_mask[a]["ratio"] >= args.area_threshold:
             label = "1"
         else:
             label = "0"

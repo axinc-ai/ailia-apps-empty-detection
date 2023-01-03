@@ -359,8 +359,10 @@ def menu(root):
 # ======================
 
 root = None
-resolutionTextEntry= None
-labelTextEntry= None
+resolutionTextEntry = None
+areaThresholdTextEntry = None
+labelAcceptTextEntry = None
+labelDenyTextEntry = None
 
 def ui():
     # rootメインウィンドウの設定
@@ -483,15 +485,35 @@ def ui():
     resolutionTextEntry.insert(tkinter.END,"800")
     resolutionTextEntry.grid(row=2, column=3, sticky=tk.NW, rowspan=1)
 
+    textAreaThreshold= tk.StringVar(frame)
+    textAreaThreshold.set("Area Threshold")
+    labelAreaThreshold = tk.Label(frame, textvariable=textAreaThreshold)
+    labelAreaThreshold.grid(row=3, column=3, sticky=tk.NW)
+
+    global areaThresholdTextEntry
+    areaThresholdTextEntry = tkinter.Entry(frame, width=20)
+    areaThresholdTextEntry.insert(tkinter.END,"0.125")
+    areaThresholdTextEntry.grid(row=4, column=3, sticky=tk.NW, rowspan=1)
+
     textLabels = tk.StringVar(frame)
     textLabels.set("Accept Label")
     labelLabels = tk.Label(frame, textvariable=textLabels)
-    labelLabels.grid(row=3, column=3, sticky=tk.NW)
+    labelLabels.grid(row=5, column=3, sticky=tk.NW)
 
-    global labelTextEntry
-    labelTextEntry = tkinter.Entry(frame, width=20)
-    labelTextEntry.insert(tkinter.END,"all")
-    labelTextEntry.grid(row=4, column=3, sticky=tk.NW, rowspan=1)
+    global labelAcceptTextEntry
+    labelAcceptTextEntry = tkinter.Entry(frame, width=20)
+    labelAcceptTextEntry.insert(tkinter.END,"all")
+    labelAcceptTextEntry.grid(row=6, column=3, sticky=tk.NW, rowspan=1)
+
+    textDenyLabels = tk.StringVar(frame)
+    textDenyLabels.set("Deny Label")
+    labelDenyLabels = tk.Label(frame, textvariable=textDenyLabels)
+    labelDenyLabels.grid(row=7, column=3, sticky=tk.NW)
+
+    global labelDenyTextEntry
+    labelDenyTextEntry = tkinter.Entry(frame, width=20)
+    labelDenyTextEntry.insert(tkinter.END,"none")
+    labelDenyTextEntry.grid(row=8, column=3, sticky=tk.NW, rowspan=1)
 
     root.mainloop()
 
@@ -538,6 +560,10 @@ def run():
     if resolutionTextEntry:
         args_dict["detection_width"] = int(resolutionTextEntry.get())
 
+    global areaThresholdTextEntry
+    if areaThresholdTextEntry:
+        args_dict["area_threshold"] = float(areaThresholdTextEntry.get())
+
     version = ailia.get_version().split(".")
     major_version = int(version[0])
     minor_version = int(version[1])
@@ -571,11 +597,18 @@ def run():
                 options.append("--"+key)
                 options.append(str(args_dict[key]))
 
-    global clipTextEntery
-    if labelTextEntry:
-        label_text = labelTextEntry.get().split(",")
+    global labelAcceptTextEntry
+    if labelAcceptTextEntry:
+        label_text = labelAcceptTextEntry.get().split(",")
         for text in label_text:
-                options.append("--text")
+                options.append("--accept_text")
+                options.append(text)
+
+    global labelDenyTextEntry
+    if labelDenyTextEntry:
+        label_text = labelDenyTextEntry.get().split(",")
+        for text in label_text:
+                options.append("--deny_text")
                 options.append(text)
 
     cmd = [cmd, "detic.py"] + options
