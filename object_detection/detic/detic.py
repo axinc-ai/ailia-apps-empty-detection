@@ -150,19 +150,25 @@ def display_area(frame, area_mask):
         if area_mask[a]["ratio"] >= threshold:
             frame[mask>0] = 255
         
-        cv2.putText(frame, area_id, (target_lines[0][0] + 5,target_lines[0][1] + 30),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, thickness=1)
-        #for i in range(0, len(target_lines)):
-        #    cv2.circle(frame, center = target_lines[i], radius = 3, color=color, thickness=3)
+def display_text(frame, area_mask):
+    for a in range(len(area_mask)):
+        area_id = area_mask[a]["id"]
+        target_lines = area_mask[a]["target_lines"]
+
+        color = (0,0,255)
 
         label = "Empty"
         if area_mask[a]["ratio"] >= threshold:
             label = "Fill"
+
+        cv2.putText(frame, area_id, (target_lines[0][0] + 5,target_lines[0][1] + 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, thickness=1)
+
         #label = label + "(" + str(int(area_mask[a]["ratio"]*100)/100.0) + ")"
         cv2.putText(frame, area_id + " : "+label, (0, a * 40 + 40),
                     cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0,0,255), thickness=3)
 
-threshold = 0.25
+threshold = 0.125#25
 
 def check_area_overwrap(pred_masks, classes, area_mask):
     # get detected label name
@@ -540,9 +546,6 @@ def recognize_from_video(net):
         # inference
         pred = predict(net, frame)
 
-        # draw prediction
-        res_img = draw_predictions(frame, pred)
-
         # prepare mask
         if area_mask == None:
             area_mask = prepare_area_mask(frame)
@@ -555,7 +558,14 @@ def recognize_from_video(net):
         check_area_overwrap(pred["pred_masks"].astype(np.uint8), pred["pred_classes"].tolist(), area_mask)
 
         # draw area
+        res_img = frame.copy()
         display_area(res_img, area_mask)
+
+        # draw prediction
+        res_img = draw_predictions(res_img, pred)
+
+        # draw text
+        display_text(res_img, area_mask)
 
         # show
         cv2.imshow('frame', res_img)
