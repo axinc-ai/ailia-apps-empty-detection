@@ -150,6 +150,51 @@ def model_changed(event):
     #print("model",model_index)
 
 # ======================
+# EditableListbox
+# ======================
+
+class EditableListbox(tk.Listbox):
+    def __init__(self, master, **kwargs):
+        super().__init__(master, **kwargs)
+        self.edit_item = None
+        self.bind("<Double-1>", self._start_edit)
+
+    def _start_edit(self, event):
+        index = self.index(f"@{event.x},{event.y}")
+        self.start_edit(index)
+        return "break"
+
+    def start_edit(self, index):
+        self.edit_item = index
+        text = self.get(index)
+        y0 = self.bbox(index)[1]
+        entry = tk.Entry(self, borderwidth=0, highlightthickness=1)
+        entry.bind("<Return>", self.accept_edit)
+        entry.bind("<Escape>", self.cancel_edit)
+
+        entry.insert(0, text)
+        entry.selection_from(0)
+        entry.selection_to("end")
+        entry.place(relx=0, y=y0, relwidth=1, width=-1)
+        entry.focus_set()
+        entry.grab_set()
+
+    def cancel_edit(self, event):
+        event.widget.destroy()
+
+    def accept_edit(self, event):
+        new_data = event.widget.get()
+        new_data = new_data.replace(" ","_")
+
+        self.delete(self.edit_item)
+        self.insert(self.edit_item, new_data)
+        event.widget.destroy()
+
+        global area_list, area_idx
+        area_list[area_idx]["id"] = new_data
+        update_area()
+
+# ======================
 # Area setting
 # ======================
 
@@ -272,7 +317,7 @@ def set_area():
     global listsArea
     listsArea = tk.StringVar(value=area_list)
     global ListboxArea
-    ListboxArea = tk.Listbox(areaListWindow, listvariable=listsArea, width=20, height=16, selectmode="single", exportselection=False)
+    ListboxArea = EditableListbox(areaListWindow, listvariable=listsArea, width=20, height=16, selectmode="single", exportselection=False)
     ListboxArea.bind("<<ListboxSelect>>", area_select_changed)
     ListboxArea.select_set(area_idx)
     ListboxArea.grid(row=1, column=0, sticky=tk.NW, rowspan=1, columnspan=20)
