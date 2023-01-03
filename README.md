@@ -2,6 +2,8 @@
 
 Detects cars in parking lots, inventory on shelves, etc., and counts vacant information.
 
+[![ailia APPS Empty Detection YouTube Video](http://img.youtube.com/vi/zgclmbgboPg/0.jpg)](https://www.youtube.com/watch?v=zgclmbgboPg)
+
 ## Functions
 
 - Empty area detection
