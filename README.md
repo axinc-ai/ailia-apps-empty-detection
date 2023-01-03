@@ -55,12 +55,23 @@ time(sec) , area0 , area1 , area2
 
 You can improve performance by lowering the image recognition resolution.
 
-### Set acceptable label
+### Set area threshold
+
+Specify the ratio of whether or not to judge that an object exists when how much it overlaps.
+
+### Set accept label
 
 By default, all class labels are recognized.
 By entering the class name in Accept Label, only a specific class label can be recognized.
 For example, in the case of a parking lot, area determination can be performed only for the car by setting the Accept Label to car.
 Multiple labels can be specified by separating them with commas.
+
+### Set deny label
+
+By default, all class labels are recognized.
+By entering the class name in Deny Label, ignoring certain labels.
+For example, by specifying person, it is possible to remove the effect when a person crosses the camera.
+By default (none), all objects are detected and not ignored.
 
 ## Models
 
