@@ -178,9 +178,9 @@ def display_area(frame, area_mask):
         #if len(target_lines) >= 2:
 
         for i in range(len(target_lines) - 1):
-            cv2.line(frame, target_lines[i], target_lines[i+1], color, thickness=1)
+            cv2.line(frame, (target_lines[i][0], target_lines[i][1]), (target_lines[i+1][0], target_lines[i+1][1]), color, thickness=1)
         if len(target_lines) >= 4:
-            cv2.line(frame, target_lines[3], target_lines[0], color, thickness=1)
+            cv2.line(frame, (target_lines[3][0], target_lines[3][1]), (target_lines[0][0], target_lines[0][1]), color, thickness=1)
 
         if area_mask[a]["ratio"] >= args.area_threshold:
             frame[mask>0] = 255
