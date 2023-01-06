@@ -223,13 +223,13 @@ def display_area(frame):
             color = (255,0,0)
         if len(target_lines) >= 2:
             for i in range(len(target_lines) - 1):
-                cv2.line(frame, target_lines[i], target_lines[i+1], color, thickness=1)
+                cv2.line(frame, (target_lines[i][0], target_lines[i][1]), (target_lines[i+1][0], target_lines[i+1][1]), color, thickness=1)
             if len(target_lines) >= 4:
-                cv2.line(frame, target_lines[3], target_lines[0], color, thickness=1)
+                cv2.line(frame, (target_lines[3][0], target_lines[3][1]), (target_lines[0][0], target_lines[0][1]), color, thickness=1)
             cv2.putText(frame, area_id, (target_lines[0][0] + 5,target_lines[0][1] + 30),
                         cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, thickness=1)
         for i in range(0, len(target_lines)):
-            cv2.circle(frame, center = target_lines[i], radius = 3, color=color, thickness=3)
+            cv2.circle(frame, center = (target_lines[i][0], target_lines[i][1]), radius = 3, color=color, thickness=3)
 
 g_frame = None
 areaWindows = None
