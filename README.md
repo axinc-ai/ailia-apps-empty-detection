@@ -41,14 +41,15 @@ Click on the screen to draw two lines.
 
 ### Write output to video and csv
 
-a. Push "Output video" button to select output video
-b. Push "Output csv" button to select output csv
+a. Push "Output video" button to select the path for video
+b. Push "Output csv" button to select the path for csv
+c. Push "Output image" button to select the folder for detected image
 
 The examples of csv file.
 
 ```
-time(sec) , area0 , area1 , area2
-0 , 1 , 1 , 0
+sec , time , area0 , area1 , area2
+0 , 2023-02-18 12:32:52.289135 , 1 , 1 , 0
 ```
 
 ### Set detection resolution
