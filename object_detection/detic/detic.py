@@ -81,6 +81,10 @@ parser.add_argument(
     help='Set output csv.'
 )
 parser.add_argument(
+    '--imgpath', type=str, default=None,
+    help='Set output image.'
+)
+parser.add_argument(
     '-dw', '--detection_width',
     default=800, type=int,   # tempolary limit to 800px (original : 1333)
     help='The detection width for detic. (default: 800)'
@@ -149,7 +153,7 @@ def prepare_area_mask(frame):
         area_id = area_list[a]
         mask, target_lines = _create_area_mask(frame, a)
         a = a + 9
-        area_mask.append({"id":area_id, "mask":mask,"target_lines":target_lines,"ratio":0.0})
+        area_mask.append({"id":area_id, "mask":mask,"target_lines":target_lines,"ratio":0.0,"label":""})
     return area_mask
 
 def _create_area_mask(frame, a):
@@ -184,7 +188,7 @@ def display_area(frame, area_mask):
 
         if area_mask[a]["ratio"] >= args.area_threshold:
             frame[mask>0] = 255
-        
+
 def display_text(frame, area_mask):
     for a in range(len(area_mask)):
         area_id = area_mask[a]["id"]
@@ -192,9 +196,7 @@ def display_text(frame, area_mask):
 
         color = (0,0,255)
 
-        label = "Empty"
-        if area_mask[a]["ratio"] >= args.area_threshold:
-            label = "Fill"
+        label = area_mask[a]["label"]
 
         cv2.putText(frame, area_id, (target_lines[0][0] + 5,target_lines[0][1] + 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 1.0, color, thickness=1)
@@ -279,20 +281,31 @@ def check_area_overwrap(pred_masks, classes, area_mask):
         #else:
         area_mask[a]["ratio"] = area_mask[a]["new_ratio"]
 
+def decide_label(area_mask):
+    state_changed = False
+    for a in range(len(area_mask)):
+        label = "Empty"
+        if area_mask[a]["ratio"] >= args.area_threshold:
+            label = "Fill"
+        if area_mask[a]["label"] != label:
+            state_changed = True
+        area_mask[a]["label"] = label
+    return state_changed
+
 # ======================
 # Csv output
 # ======================
 
 def open_csv(area_mask):
     csv = open(args.csvpath, mode = 'w')
-    csv.write("time(sec)")
+    csv.write("sec , time")
     for a in range(len(area_mask)):
         csv.write(" , " + area_mask[a]["id"])
     csv.write("\n")
     return csv
 
-def write_csv(csv, fps_time, area_mask):
-    csv.write(str(fps_time))
+def write_csv(csv, fps_time, time_stamp, area_mask):
+    csv.write(str(fps_time)+" , "+time_stamp)
     for a in range(len(area_mask)):
         if area_mask[a]["ratio"] >= args.area_threshold:
             label = "1"
@@ -623,6 +636,9 @@ def recognize_from_video(net):
         if frame_shown and cv2.getWindowProperty('frame', cv2.WND_PROP_VISIBLE) == 0:
             break
     
+        # timestamp
+        time_stamp = str(datetime.datetime.now())
+
         # inference
         pred = predict(net, frame)
 
@@ -636,6 +652,9 @@ def recognize_from_video(net):
 
         # check area
         check_area_overwrap(pred["pred_masks"].astype(np.uint8), pred["pred_classes"].tolist(), area_mask)
+
+        # decide label
+        state_changed = decide_label(area_mask)
 
         # draw area
         res_img = frame.copy()
@@ -658,9 +677,19 @@ def recognize_from_video(net):
         fps_time = int(frame_no / fps)
         if csv is not None:
             if before_fps_time != fps_time:
-                write_csv(csv, fps_time, area_mask)
+                write_csv(csv, fps_time, time_stamp, area_mask)
                 before_fps_time = fps_time
         
+        # save frame
+        if state_changed:
+            if args.imgpath:
+                path = time_stamp
+                path = path.replace(" ","-")
+                path = path.replace(".","-")
+                path = path.replace(":","-")
+                path = args.imgpath+"/"+path+".jpg"
+                cv2.imwrite(path, res_img)
+
         frame_no = frame_no + 1
 
     capture.release()
@@ -713,10 +742,7 @@ def main():
             reduce_interstage=True, reuse_interstage=False)
     net = ailia.Net(MODEL_PATH, WEIGHT_PATH, env_id=args.env_id, memory_mode=memory_mode)
 
-    if args.video is not None:
-        recognize_from_video(net)
-    else:
-        recognize_from_image(net)
+    recognize_from_video(net)
 
 
 if __name__ == '__main__':

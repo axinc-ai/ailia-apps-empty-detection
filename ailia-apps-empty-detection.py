@@ -1,3 +1,6 @@
+# ailia APPS Empty Detection
+# (C) 2022-2023 AXELL CORPORATION
+
 import sys
 import time
 
@@ -91,6 +94,14 @@ def input_video_dialog():
         input_index = len(input_list)-1
         ListboxInput.select_set(input_index)
 
+def apply_path_to_ui():
+    global textOutputVideoDetail
+    textOutputVideoDetail.set(os.path.basename(args.savepath))
+    global textOutputCsvDetail
+    textOutputCsvDetail.set(os.path.basename(args.csvpath))
+    global textOutputImageDetail
+    textOutputImageDetail.set(os.path.basename(args.imgpath))
+
 def output_video_dialog():
     global textOutputVideoDetail
     fTyp = [("Output Video File", "*")]
@@ -98,7 +109,7 @@ def output_video_dialog():
     file_name = tk.filedialog.asksaveasfilename(filetypes=fTyp, initialdir=iDir)
     if len(file_name) != 0:
         args.savepath = file_name
-        textOutputVideoDetail.set(os.path.basename(args.savepath))
+        apply_path_to_ui()
 
 def output_csv_dialog():
     global textOutputCsvDetail
@@ -107,7 +118,15 @@ def output_csv_dialog():
     file_name = tk.filedialog.asksaveasfilename(filetypes=fTyp, initialdir=iDir)
     if len(file_name) != 0:
         args.csvpath = file_name
-        textOutputCsvDetail.set(os.path.basename(args.csvpath))
+        apply_path_to_ui()
+
+def output_img_dialog():
+    fTyp = [("Output Image Folder", "*")]
+    iDir = os.path.abspath(os.path.dirname(__file__))
+    file_name = tk.filedialog.askdirectory(initialdir=iDir)
+    if len(file_name) != 0:
+        args.imgpath = file_name
+        apply_path_to_ui()
 
 # ======================
 # Environment
@@ -400,6 +419,10 @@ def get_settings():
     else:
         settings["multiple_assign"] = False
     
+    settings["savepath"] = args.savepath
+    settings["csvpath"] = args.csvpath
+    settings["imgpath"] = args.imgpath
+
     return settings
 
 def set_settings(settings):
@@ -431,6 +454,15 @@ def set_settings(settings):
 
     global checkBoxMultipleAssignBln
     checkBoxMultipleAssignBln.set(settings["multiple_assign"])
+
+    if "savepath" in settings:
+        args.savepath = settings["savepath"]
+    if "csvpath" in settings:
+        args.csvpath = settings["csvpath"]
+    if "imgpath" in settings:
+        args.imgpath = settings["imgpath"]
+    
+    apply_path_to_ui()
 
 def menu_file_open_click():
     fTyp = [("Config files","*.json")]
@@ -534,15 +566,26 @@ def ui():
     labelOutputCsvDetail= tk.Label(frame, textvariable=textOutputCsvDetail)
     labelOutputCsvDetail.grid(row=3, column=1, sticky=tk.NW)
 
+    textOutputImage = tk.StringVar(frame)
+    textOutputImage.set("Output image")
+    buttonOutputImage = tk.Button(frame, textvariable=textOutputImage, command=output_img_dialog, width=14)
+    buttonOutputImage.grid(row=4, column=0, sticky=tk.NW)
+
+    global textOutputImageDetail
+    textOutputImageDetail = tk.StringVar(frame)
+    textOutputImageDetail.set(args.imgpath)
+    labelOutputImageDetail= tk.Label(frame, textvariable=textOutputImageDetail)
+    labelOutputImageDetail.grid(row=4, column=1, sticky=tk.NW)
+
     textTrainVideo = tk.StringVar(frame)
     textTrainVideo.set("Run")
     buttonTrainVideo = tk.Button(frame, textvariable=textTrainVideo, command=run, width=14)
-    buttonTrainVideo.grid(row=4, column=0, sticky=tk.NW)
+    buttonTrainVideo.grid(row=5, column=0, sticky=tk.NW)
 
     textTrainVideo = tk.StringVar(frame)
     textTrainVideo.set("Stop")
     buttonTrainVideo = tk.Button(frame, textvariable=textTrainVideo, command=stop, width=14)
-    buttonTrainVideo.grid(row=5, column=0, sticky=tk.NW)
+    buttonTrainVideo.grid(row=6, column=0, sticky=tk.NW)
 
     global listsInput, ListboxInput
 
@@ -640,8 +683,9 @@ def ui():
 # ======================
 
 def main():
-    args.savepath = "output.mp4"
-    args.csvpath = "output.csv"
+    args.savepath = ""
+    args.csvpath = ""
+    args.imgpath = ""
     ui()
 
 import subprocess
@@ -662,11 +706,14 @@ def run():
     args_dict = {}#vars(args)
     args_dict["video"] = get_video_path()
         
-    if args.savepath:
-        args_dict["savepath"] = args.savepath
-    if args.csvpath:
-        args_dict["csvpath"] = args.csvpath
-    
+    settings = get_settings()
+    if settings["savepath"]:
+        args_dict["savepath"] = settings["savepath"]
+    if settings["csvpath"]:
+        args_dict["csvpath"] = settings["csvpath"]
+    if settings["imgpath"]:
+        args_dict["imgpath"] = settings["imgpath"]
+
     global model_index
     args_dict["model_type"] = get_model_list()[model_index].split("-")[0]
     args_dict["vocabulary"] = get_model_list()[model_index].split("-")[1]
