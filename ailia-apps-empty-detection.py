@@ -3,6 +3,7 @@
 
 import sys
 import time
+from signal import SIGINT
 
 import numpy as np
 import cv2
@@ -791,11 +792,11 @@ def run():
     except subprocess.TimeoutExpired:
         pass
 
+
 def stop():
     global proc
-
     if not (proc==None):
-        proc.kill()
+        proc.send_signal(SIGINT)
         proc=None
 
 if __name__ == '__main__':
