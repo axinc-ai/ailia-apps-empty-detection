@@ -117,6 +117,22 @@ if not args.opset16:
 area_list = args.area.split(" ")
 
 # ======================
+# Terminate
+# ======================
+
+from signal import SIGINT
+import signal
+
+terminate_signal = False
+
+def _signal_handler(signal, handler):
+    global terminate_signal
+    terminate_signal = True
+
+def set_signal_handler():
+    signal.signal(signal.SIGINT,  _signal_handler)
+
+# ======================
 # Accept and Deny labels
 # ======================
 
@@ -635,6 +651,9 @@ def recognize_from_video(net):
             break
         if frame_shown and cv2.getWindowProperty('frame', cv2.WND_PROP_VISIBLE) == 0:
             break
+        global terminate_signal
+        if terminate_signal:
+            break
     
         # timestamp
         time_stamp = str(datetime.datetime.now())
@@ -703,6 +722,8 @@ def recognize_from_video(net):
 
 
 def main():
+    set_signal_handler()
+
     if args.opset16:
         dic_model = {
             ('SwinB_896_4x', 'lvis'): (WEIGHT_SWINB_LVIS_OP16_PATH, MODEL_SWINB_LVIS_OP16_PATH),
