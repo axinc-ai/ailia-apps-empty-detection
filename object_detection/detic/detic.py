@@ -656,7 +656,7 @@ def recognize_from_video(net):
             break
     
         # timestamp
-        time_stamp = str(datetime.datetime.now())
+        time_stamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
 
         # inference
         pred = predict(net, frame)
